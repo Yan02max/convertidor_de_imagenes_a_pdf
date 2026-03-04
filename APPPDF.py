@@ -7,7 +7,7 @@ from datetime import datetime
 
 # Configuración de página optimizada
 st.set_page_config(
-    page_title="Pro Converter - Imagen a PDF", 
+    page_title="Converter - Imagen a PDF De Yan", 
     page_icon="🚀",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -377,7 +377,7 @@ if uploaded_files:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; padding: 2rem;">
-    <p>🚀 Pro PDF Converter v2.0 | Procesamiento masivo de imágenes</p>
+    <p>🚀 PDF Converter De Yan | Procesamiento masivo de imágenes</p>
     <p style="font-size: 0.8rem;">Soporta hasta 50 archivos simultáneos • Máximo 50MB por archivo</p>
 </div>
 """, unsafe_allow_html=True)
