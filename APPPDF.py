@@ -126,9 +126,9 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <h1 style="font-size: 3.5rem; background: linear-gradient(45deg, #2196F3, #4CAF50); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-        🚀 Pro PDF Converter
+        🚀 PDF Converter Yan
     </h1>
-    <p style="font-size: 1.3rem; color: #666;">Conversión masiva de imágenes con visualización en tiempo real</p>
+    <p style="font-size: 1.3rem; color: #666;">Conversión de imágenes con visualización en tiempo real</p>
 </div>
 """, unsafe_allow_html=True)
 
