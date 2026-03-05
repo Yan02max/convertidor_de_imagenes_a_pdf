@@ -79,71 +79,25 @@ st.markdown("""
         text-align: center;
     }
     
-    /* Estilos de hoja de presentación */
-    .sheet-class {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 3rem;
+    .info-sheet {
+        background: white;
+        border: 2px solid #e0e0e0;
         border-radius: 15px;
-        position: relative;
-        overflow: hidden;
+        padding: 2rem;
+        margin: 1rem 0;
     }
     
-    .sheet-class::before {
-        content: "✏️";
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        font-size: 4rem;
-        opacity: 0.2;
+    .info-sheet-class {
+        border-left: 5px solid #667eea;
     }
     
-    .sheet-gift {
-        background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #ffecd2 100%);
-        color: #d63031;
-        padding: 3rem;
-        border-radius: 15px;
-        position: relative;
-        overflow: hidden;
-        border: 3px solid #ff6b6b;
+    .info-sheet-gift {
+        border-left: 5px solid #ff6b6b;
+        background: linear-gradient(to right, #fff5f5, white);
     }
     
-    .sheet-gift::before {
-        content: "🎁";
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        font-size: 4rem;
-        opacity: 0.3;
-    }
-    
-    .sheet-work {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-        color: white;
-        padding: 3rem;
-        border-radius: 15px;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .sheet-work::before {
-        content: "💼";
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        font-size: 4rem;
-        opacity: 0.2;
-    }
-    
-    .watermark-preview {
-        position: absolute;
-        bottom: 20px;
-        right: 20px;
-        font-size: 1.5rem;
-        opacity: 0.6;
-        font-weight: bold;
-        color: rgba(255,255,255,0.8);
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    .info-sheet-work {
+        border-left: 5px solid #11998e;
     }
     
     #MainMenu {visibility: hidden;}
@@ -201,10 +155,10 @@ with st.container():
         margin = st.slider("Margen (mm)", 0, 50, 0)
     
     with col3:
-        # Selector de formato de hoja
+        # Selector de tipo de hoja de información
         sheet_format = st.selectbox(
-            "📄 Formato de Hoja",
-            ["Clase/Escolar", "Regalo", "Trabajo/Profesional"]
+            "📄 Tipo de Documento",
+            ["Solo Imágenes", "Clase/Escolar", "Regalo", "Trabajo/Profesional"]
         )
         
         page_size = st.selectbox(
@@ -248,20 +202,72 @@ with st.container():
     
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Función para obtener estilo de hoja
-def get_sheet_style():
-    styles = {
-        "Clase/Escolar": "sheet-class",
-        "Regalo": "sheet-gift",
-        "Trabajo/Profesional": "sheet-work"
-    }
-    return styles.get(sheet_format, "sheet-class")
+# HOJA DE INFORMACIÓN OPCIONAL (aparece solo si no es "Solo Imágenes")
+show_info_sheet = sheet_format != "Solo Imágenes"
+
+if show_info_sheet:
+    st.markdown("### 📝 Hoja de Información (Opcional)")
+    
+    with st.container():
+        if sheet_format == "Clase/Escolar":
+            st.markdown('<div class="info-sheet info-sheet-class">', unsafe_allow_html=True)
+            st.markdown("#### ✏️ Información del Estudiante")
+            
+            col_a, col_b = st.columns(2)
+            with col_a:
+                student_name = st.text_input("Nombre del estudiante", "")
+                subject = st.text_input("Materia/Asignatura", "")
+                teacher = st.text_input("Profesor(a)", "")
+            with col_b:
+                grade = st.text_input("Grado/Grupo", "")
+                date_class = st.date_input("Fecha", datetime.now())
+                school = st.text_input("Escuela/Institución", "")
+            
+            topic = st.text_area("Tema o descripción", "", height=100)
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+        elif sheet_format == "Regalo":
+            st.markdown('<div class="info-sheet info-sheet-gift">', unsafe_allow_html=True)
+            st.markdown("#### 🎁 Información del Regalo")
+            
+            col_a, col_b = st.columns(2)
+            with col_a:
+                recipient = st.text_input("Para:", "")
+                occasion = st.selectbox("Ocasión", ["Cumpleaños", "Aniversario", "Navidad", "San Valentín", "Otro"])
+            with col_b:
+                sender = st.text_input("De parte de:", "")
+                date_gift = st.date_input("Fecha del regalo", datetime.now())
+            
+            message = st.text_area("Mensaje personal", "¡Con mucho cariño!", height=100)
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+        elif sheet_format == "Trabajo/Profesional":
+            st.markdown('<div class="info-sheet info-sheet-work">', unsafe_allow_html=True)
+            st.markdown("#### 💼 Información del Documento")
+            
+            col_a, col_b = st.columns(2)
+            with col_a:
+                company = st.text_input("Empresa/Organización", "")
+                department = st.text_input("Departamento", "")
+                prepared_by = st.text_input("Preparado por", "")
+            with col_b:
+                doc_title = st.text_input("Título del documento", "")
+                doc_code = st.text_input("Código/Referencia", "")
+                date_work = st.date_input("Fecha", datetime.now())
+            
+            confidentiality = st.select_slider(
+                "Nivel de confidencialidad",
+                options=["Público", "Interno", "Confidencial", "Restringido"],
+                value="Interno"
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
 
 def get_sheet_emoji():
     emojis = {
         "Clase/Escolar": "✏️",
         "Regalo": "🎁",
-        "Trabajo/Profesional": "💼"
+        "Trabajo/Profesional": "💼",
+        "Solo Imágenes": "🖼️"
     }
     return emojis.get(sheet_format, "📄")
 
@@ -273,11 +279,9 @@ def apply_orientation(img):
     width, height = img.size
     
     if orientation == "Horizontal":
-        # Forzar horizontal (landscape)
         if height > width:
             img = img.rotate(90, expand=True)
     elif orientation == "Vertical":
-        # Forzar vertical (portrait)
         if width > height:
             img = img.rotate(-90, expand=True)
     
@@ -306,26 +310,207 @@ def resize_to_page_size(img):
     img_w, img_h = img.size
     scale_w = target_w / img_w if img_w > 0 else 1
     scale_h = target_h / img_h if img_h > 0 else 1
-    scale = min(scale_w, scale_h, 1.0)  # No ampliar, solo reducir
+    scale = min(scale_w, scale_h, 1.0)
     
     new_w = max(int(img_w * scale), 1)
     new_h = max(int(img_h * scale), 1)
     
     return img.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
-def add_watermark(img, text="Yan"):
+def create_info_sheet_image(format_type):
+    """Crea una imagen de la hoja de información según el tipo"""
+    if format_type == "Solo Imágenes":
+        return None
+    
+    # Tamaño A4 en pixels (150 DPI)
+    sheet_width, sheet_height = 1240, 1754
+    
+    if format_type == "Clase/Escolar":
+        # Fondo blanco con borde azul
+        sheet = Image.new('RGB', (sheet_width, sheet_height), (255, 255, 255))
+        draw = ImageDraw.Draw(sheet)
+        
+        # Borde decorativo
+        draw.rectangle([20, 20, sheet_width-20, sheet_height-20], outline=(102, 126, 234), width=5)
+        
+        # Header
+        try:
+            font_header = ImageFont.truetype("arial.ttf", 50)
+            font_text = ImageFont.truetype("arial.ttf", 30)
+            font_small = ImageFont.truetype("arial.ttf", 25)
+        except:
+            font_header = ImageFont.load_default()
+            font_text = ImageFont.load_default()
+            font_small = ImageFont.load_default()
+        
+        # Título
+        draw.text((sheet_width//2, 80), "✏️ INFORMACIÓN DEL ESTUDIANTE", 
+                 fill=(102, 126, 234), font=font_header, anchor="mm")
+        
+        # Línea decorativa
+        draw.line([(100, 120), (sheet_width-100, 120)], fill=(102, 126, 234), width=3)
+        
+        # Información del formulario
+        y_pos = 180
+        line_height = 60
+        
+        info_lines = [
+            f"👤 Estudiante: {student_name if student_name else '_____________________'}",
+            f"📚 Materia: {subject if subject else '_____________________'}",
+            f"👨‍🏫 Profesor(a): {teacher if teacher else '_____________________'}",
+            f"🎓 Grado/Grupo: {grade if grade else '_____________________'}",
+            f"📅 Fecha: {date_class.strftime('%d/%m/%Y') if 'date_class' in locals() else '_____________________'}",
+            f"🏫 Escuela: {school if school else '_____________________'}",
+            "",
+            "📝 Tema/Descripción:",
+            topic if 'topic' in locals() and topic else "______________________________________________",
+        ]
+        
+        for line in info_lines:
+            draw.text((80, y_pos), line, fill=(50, 50, 50), font=font_text)
+            y_pos += line_height
+        
+        # Marca de agua Yan
+        draw.text((sheet_width-150, sheet_height-80), "Yan", 
+                 fill=(200, 200, 200), font=font_header)
+        
+        return sheet
+        
+    elif format_type == "Regalo":
+        # Fondo blanco con detalles rosas
+        sheet = Image.new('RGB', (sheet_width, sheet_height), (255, 255, 255))
+        draw = ImageDraw.Draw(sheet)
+        
+        # Decoración de regalo
+        draw.rectangle([20, 20, sheet_width-20, sheet_height-20], outline=(255, 107, 107), width=5)
+        
+        # Moño decorativo en esquinas
+        for x in [50, sheet_width-100]:
+            for y in [50, sheet_height-150]:
+                draw.ellipse([x, y, x+50, y+50], fill=(255, 154, 158))
+        
+        try:
+            font_header = ImageFont.truetype("arial.ttf", 50)
+            font_text = ImageFont.truetype("arial.ttf", 35)
+            font_message = ImageFont.truetype("arial.ttf", 30)
+        except:
+            font_header = ImageFont.load_default()
+            font_text = ImageFont.load_default()
+            font_message = ImageFont.load_default()
+        
+        # Título
+        draw.text((sheet_width//2, 100), "🎁 REGALO ESPECIAL", 
+                 fill=(255, 107, 107), font=font_header, anchor="mm")
+        
+        y_pos = 200
+        
+        # Información
+        draw.text((100, y_pos), f"Para: {recipient if recipient else '_____________________'}", 
+                 fill=(50, 50, 50), font=font_text)
+        y_pos += 80
+        
+        draw.text((100, y_pos), f"Ocasión: {occasion if 'occasion' in locals() else '_____________________'}", 
+                 fill=(50, 50, 50), font=font_text)
+        y_pos += 80
+        
+        draw.text((100, y_pos), f"De: {sender if sender else '_____________________'}", 
+                 fill=(50, 50, 50), font=font_text)
+        y_pos += 80
+        
+        draw.text((100, y_pos), f"Fecha: {date_gift.strftime('%d/%m/%Y') if 'date_gift' in locals() else '_____________________'}", 
+                 fill=(50, 50, 50), font=font_text)
+        y_pos += 120
+        
+        # Caja de mensaje
+        draw.rectangle([80, y_pos, sheet_width-80, y_pos+300], outline=(255, 154, 158), width=2)
+        draw.text((100, y_pos+20), "Mensaje:", fill=(255, 107, 107), font=font_text)
+        
+        msg = message if 'message' in locals() and message else "¡Con mucho cariño!"
+        draw.text((100, y_pos+80), msg, fill=(80, 80, 80), font=font_message)
+        
+        # Marca de agua
+        draw.text((sheet_width-150, sheet_height-80), "Yan", 
+                 fill=(255, 200, 200), font=font_header)
+        
+        return sheet
+        
+    elif format_type == "Trabajo/Profesional":
+        # Fondo blanco con detalles verdes profesionales
+        sheet = Image.new('RGB', (sheet_width, sheet_height), (255, 255, 255))
+        draw = ImageDraw.Draw(sheet)
+        
+        # Borde profesional
+        draw.rectangle([20, 20, sheet_width-20, sheet_height-20], outline=(17, 153, 142), width=5)
+        
+        # Línea de encabezado
+        draw.rectangle([0, 0, sheet_width, 150], fill=(17, 153, 142))
+        
+        try:
+            font_header = ImageFont.truetype("arial.ttf", 40)
+            font_title = ImageFont.truetype("arial.ttf", 50)
+            font_text = ImageFont.truetype("arial.ttf", 30)
+        except:
+            font_header = ImageFont.load_default()
+            font_title = ImageFont.load_default()
+            font_text = ImageFont.load_default()
+        
+        # Header
+        draw.text((sheet_width//2, 75), "DOCUMENTO PROFESIONAL", 
+                 fill=(255, 255, 255), font=font_title, anchor="mm")
+        
+        y_pos = 200
+        
+        # Información estructurada
+        info_data = [
+            ("Empresa:", company if 'company' in locals() else ""),
+            ("Departamento:", department if 'department' in locals() else ""),
+            ("Preparado por:", prepared_by if 'prepared_by' in locals() else ""),
+            ("Título:", doc_title if 'doc_title' in locals() else ""),
+            ("Referencia:", doc_code if 'doc_code' in locals() else ""),
+            ("Fecha:", date_work.strftime('%d/%m/%Y') if 'date_work' in locals() else ""),
+        ]
+        
+        for label, value in info_data:
+            draw.text((100, y_pos), f"{label}", fill=(17, 153, 142), font=font_header)
+            draw.text((400, y_pos), value if value else "_____________________", 
+                     fill=(50, 50, 50), font=font_text)
+            y_pos += 70
+        
+        # Nivel de confidencialidad
+        y_pos += 30
+        conf_level = confidentiality if 'confidentiality' in locals() else "Interno"
+        
+        # Caja de confidencialidad
+        conf_colors = {
+            "Público": (76, 175, 80),
+            "Interno": (33, 150, 243),
+            "Confidencial": (255, 152, 0),
+            "Restringido": (244, 67, 54)
+        }
+        conf_color = conf_colors.get(conf_level, (128, 128, 128))
+        
+        draw.rectangle([100, y_pos, sheet_width-100, y_pos+80], fill=conf_color)
+        draw.text((sheet_width//2, y_pos+40), f"NIVEL: {conf_level.upper()}", 
+                 fill=(255, 255, 255), font=font_header, anchor="mm")
+        
+        # Marca de agua
+        draw.text((sheet_width-150, sheet_height-80), "Yan", 
+                 fill=(200, 220, 215), font=font_header)
+        
+        return sheet
+    
+    return None
+
+def add_watermark_to_image(img, text="Yan"):
     """Añade marca de agua 'Yan' a la imagen"""
-    # Crear copia para no modificar original
     watermarked = img.copy()
     draw = ImageDraw.Draw(watermarked)
     
-    # Intentar usar fuente por defecto o crear una básica
     try:
         font = ImageFont.truetype("arial.ttf", 40)
     except:
         font = ImageFont.load_default()
     
-    # Calcular posición (esquina inferior derecha)
     bbox = draw.textbbox((0, 0), text, font=font)
     text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
@@ -333,98 +518,12 @@ def add_watermark(img, text="Yan"):
     x = img.width - text_width - 30
     y = img.height - text_height - 30
     
-    # Dibujar sombra
-    draw.text((x+2, y+2), text, font=font, fill=(0, 0, 0, 128))
-    # Dibujar texto principal
-    draw.text((x, y), text, font=font, fill=(255, 255, 255, 200))
+    # Sombra
+    draw.text((x+2, y+2), text, font=font, fill=(0, 0, 0, 100))
+    # Texto
+    draw.text((x, y), text, font=font, fill=(255, 255, 255, 180))
     
     return watermarked
-
-def create_presentation_sheet(img, format_type):
-    """Crea una hoja de presentación según el formato seleccionado"""
-    # Tamaño base A4 en pixels (150 DPI)
-    sheet_width, sheet_height = 1240, 1754
-    
-    # Crear fondo según formato
-    if format_type == "Clase/Escolar":
-        # Fondo azul-morado para clase
-        sheet = Image.new('RGB', (sheet_width, sheet_height), (102, 126, 234))
-        accent_color = (255, 255, 255)
-        emoji = "✏️"
-        title = "Material de Clase"
-    elif format_type == "Regalo":
-        # Fondo rosa para regalo
-        sheet = Image.new('RGB', (sheet_width, sheet_height), (255, 154, 158))
-        accent_color = (255, 255, 255)
-        emoji = "🎁"
-        title = "¡Con Amor!"
-    else:  # Trabajo
-        # Fondo verde para trabajo
-        sheet = Image.new('RGB', (sheet_width, sheet_height), (17, 153, 142))
-        accent_color = (255, 255, 255)
-        emoji = "💼"
-        title = "Documento Profesional"
-    
-    draw = ImageDraw.Draw(sheet)
-    
-    # Intentar cargar fuentes
-    try:
-        font_title = ImageFont.truetype("arial.ttf", 60)
-        font_emoji = ImageFont.truetype("arial.ttf", 120)
-        font_watermark = ImageFont.truetype("arial.ttf", 40)
-    except:
-        font_title = ImageFont.load_default()
-        font_emoji = ImageFont.load_default()
-        font_watermark = ImageFont.load_default()
-    
-    # Dibujar emoji grande en esquina
-    draw.text((sheet_width - 150, 50), emoji, font=font_emoji, fill=(255, 255, 255, 100))
-    
-    # Dibujar título
-    bbox = draw.textbbox((0, 0), title, font=font_title)
-    title_width = bbox[2] - bbox[0]
-    draw.text(((sheet_width - title_width) // 2, 100), title, font=font_title, fill=accent_color)
-    
-    # Calcular espacio para imagen
-    margin = 100
-    available_width = sheet_width - (2 * margin)
-    available_height = sheet_height - 300  # Espacio para título y marca de agua
-    
-    # Redimensionar imagen para caber en la hoja
-    img_ratio = img.width / img.height
-    sheet_ratio = available_width / available_height
-    
-    if img_ratio > sheet_ratio:
-        new_width = available_width
-        new_height = int(available_width / img_ratio)
-    else:
-        new_height = available_height
-        new_width = int(available_height * img_ratio)
-    
-    resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-    
-    # Pegar imagen centrada
-    x_offset = (sheet_width - new_width) // 2
-    y_offset = 250 + (available_height - new_height) // 2
-    
-    # Convertir imagen a RGB si es necesario
-    if resized_img.mode in ('RGBA', 'LA', 'P'):
-        background = Image.new('RGB', resized_img.size, (255, 255, 255))
-        if resized_img.mode == 'P':
-            resized_img = resized_img.convert('RGBA')
-        if resized_img.mode in ('RGBA', 'LA'):
-            background.paste(resized_img, mask=resized_img.split()[-1])
-        else:
-            background.paste(resized_img)
-        resized_img = background
-    
-    sheet.paste(resized_img, (x_offset, y_offset))
-    
-    # Añadir marca de agua Yan
-    draw.text((sheet_width - 150, sheet_height - 80), "Yan", font=font_watermark, 
-              fill=(255, 255, 255, 150))
-    
-    return sheet
 
 # Procesamiento
 if uploaded_files:
@@ -511,6 +610,9 @@ if uploaded_files:
                     elif image.mode != 'RGB':
                         image = image.convert('RGB')
                     
+                    # Añadir marca de agua
+                    image = add_watermark_to_image(image, "Yan")
+                    
                     images_data.append({
                         'image': image,
                         'name': os.path.splitext(file.name)[0],
@@ -528,46 +630,49 @@ if uploaded_files:
             progress_bar.empty()
             status_text.success(f"✅ ¡{len(images_data)} imágenes listas!")
             
-            # PREVISUALIZACIÓN SOLO DE LA PRIMERA FOTO
+            # PREVISUALIZACIÓN
             if images_data:
-                st.markdown("### 👁️ Previsualización (Primera imagen)")
+                st.markdown("### 👁️ Vista Previa")
                 
                 preview_col1, preview_col2 = st.columns([2, 1])
                 
                 with preview_col1:
-                    # Mostrar hoja de presentación con la primera imagen
-                    sheet_style = get_sheet_style()
-                    first_img = images_data[0]['image']
+                    # Crear vista previa: Hoja de info + primera imagen
+                    info_img = create_info_sheet_image(sheet_format)
                     
-                    # Crear hoja de presentación
-                    presentation_sheet = create_presentation_sheet(first_img, sheet_format)
+                    if info_img:
+                        # Mostrar hoja de información primero
+                        st.image(info_img, caption=f"Hoja de información: {sheet_format}", 
+                                use_container_width=True)
                     
-                    st.markdown(f'<div class="preview-container">', unsafe_allow_html=True)
-                    st.image(presentation_sheet, use_container_width=True, 
-                            caption=f"Vista previa: Formato {sheet_format} con marca de agua Yan")
-                    st.markdown('</div>', unsafe_allow_html=True)
+                    # Mostrar primera imagen procesada
+                    st.image(images_data[0]['image'], 
+                            caption=f"Primera imagen: {images_data[0]['name']} (con marca Yan)", 
+                            use_container_width=True)
                 
                 with preview_col2:
                     # Información de la previsualización
                     st.markdown("### 📋 Detalles")
                     st.info(f"""
-                    **Formato seleccionado:** {sheet_format} {get_sheet_emoji()}
+                    **Formato:** {sheet_format} {get_sheet_emoji()}
                     
-                    **Orientación aplicada:** {orientation}
+                    **Hoja de info:** {'Sí' if show_info_sheet else 'No'}
+                    
+                    **Orientación:** {orientation}
                     
                     **Tamaño original:** {images_data[0]['original_size'][0]}×{images_data[0]['original_size'][1]} px
                     
-                    **Tamaño final:** {first_img.width}×{first_img.height} px
+                    **Tamaño final:** {images_data[0]['image'].width}×{images_data[0]['image'].height} px
                     
                     **Marca de agua:** Yan™
                     
-                    **Total archivos:** {len(images_data)}
+                    **Total imágenes:** {len(images_data)}
                     """)
                     
-                    # Miniaturas de las demás imágenes (solo nombres)
+                    # Lista de archivos
                     if len(images_data) > 1:
-                        st.markdown("### 🖼️ Otras imágenes")
-                        for i, data in enumerate(images_data[1:], 1):
+                        st.markdown("### 🖼️ Archivos incluidos")
+                        for i, data in enumerate(images_data, 1):
                             st.caption(f"{i}. {data['name']}")
             
             # Botón de generación
@@ -576,11 +681,18 @@ if uploaded_files:
             if st.button("🚀 GENERAR PDF(S) CON MARCA YAN", key="convert", use_container_width=True):
                 with st.spinner("Creando documentos profesionales..."):
                     
-                    # Crear hojas de presentación para todas las imágenes
+                    # Preparar imágenes finales
                     final_images = []
+                    
+                    # 1. Agregar hoja de información primero (si aplica)
+                    if show_info_sheet:
+                        info_sheet_img = create_info_sheet_image(sheet_format)
+                        if info_sheet_img:
+                            final_images.append(info_sheet_img)
+                    
+                    # 2. Agregar todas las imágenes procesadas
                     for data in images_data:
-                        sheet = create_presentation_sheet(data['image'], sheet_format)
-                        final_images.append(sheet)
+                        final_images.append(data['image'])
                     
                     if output_format in ["PDF único", "Ambos"] and len(final_images) > 0:
                         pdf_buffer = io.BytesIO()
@@ -605,17 +717,21 @@ if uploaded_files:
                         # Mensaje según formato
                         style_colors = {
                             "Clase/Escolar": ("#667eea", "#764ba2", "✏️"),
-                            "Regalo": ("#ff9a9e", "#fecfef", "🎁"),
-                            "Trabajo/Profesional": ("#11998e", "#38ef7d", "💼")
+                            "Regalo": ("#ff6b6b", "#ff9a9e", "🎁"),
+                            "Trabajo/Profesional": ("#11998e", "#38ef7d", "💼"),
+                            "Solo Imágenes": ("#667eea", "#764ba2", "🖼️")
                         }
                         
-                        c1, c2 = style_colors.get(sheet_format, ("#667eea", "#764ba2", "📄"))
+                        c1, c2, emoji = style_colors.get(sheet_format, ("#667eea", "#764ba2", "📄"))
+                        
+                        pages_count = len(final_images)
+                        has_info = "incluye hoja de información" if show_info_sheet else "solo imágenes"
                         
                         st.markdown(f"""
                         <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, {c1} 0%, {c2} 100%); border-radius: 15px; color: white; margin: 1rem 0;">
-                            <h2>{style_colors.get(sheet_format, ("", "", "📄"))[2]} ¡PDF Creado Exitosamente!</h2>
-                            <p>Documento estilo {sheet_format} con marca de agua Yan</p>
-                            <p style="font-size: 0.9rem; opacity: 0.9;">{len(final_images)} páginas • Calidad {quality} DPI</p>
+                            <h2>{emoji} ¡PDF Creado Exitosamente!</h2>
+                            <p>Documento tipo {sheet_format} con marca de agua Yan</p>
+                            <p style="font-size: 0.9rem; opacity: 0.9;">{pages_count} páginas • {has_info} • {quality} DPI</p>
                         </div>
                         """, unsafe_allow_html=True)
                         
@@ -627,15 +743,15 @@ if uploaded_files:
                             use_container_width=True
                         )
                     
-                    # PDFs individuales
+                    # PDFs individuales (solo imágenes, sin hoja de info para no repetir)
                     if output_format in ["PDFs separados", "Ambos"]:
                         st.markdown("### 📄 Archivos Individuales")
                         
                         individual_cols = st.columns(3)
-                        for idx, (data, sheet) in enumerate(zip(images_data, final_images)):
+                        for idx, data in enumerate(images_data):
                             with individual_cols[idx % 3]:
                                 pdf_individual = io.BytesIO()
-                                sheet.save(pdf_individual, 'PDF', resolution=quality)
+                                data['image'].save(pdf_individual, 'PDF', resolution=quality)
                                 pdf_individual.seek(0)
                                 
                                 st.download_button(
@@ -657,13 +773,13 @@ with st.sidebar:
         st.metric("MB totales", f"{st.session_state.total_size:.1f}")
     
     st.markdown("---")
-    st.info("💡 **Consejo:** Usa el formato 'Regalo' para crear tarjetas especiales con la marca Yan.")
+    st.info("💡 **Tip:** Selecciona un tipo de documento para agregar una hoja de información personalizada al inicio de tu PDF.")
 
 # Footer
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; padding: 2rem;">
-    <p>🚀 PDF Converter De Yan | Documentos con estilo y marca personalizada</p>
-    <p style="font-size: 0.8rem;">Todos los PDFs incluyen marca de agua Yan™ | Hasta 50 archivos simultáneos</p>
+    <p>🚀 PDF Converter De Yan | Documentos profesionales con información personalizada</p>
+    <p style="font-size: 0.8rem;">Hoja de información opcional • Marca de agua Yan™ • Hasta 50 archivos</p>
 </div>
 """, unsafe_allow_html=True)
