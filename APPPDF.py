@@ -57,8 +57,35 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
     
+    /* Estilo móvil para vista previa */
+    .mobile-preview-container {
+        max-width: 400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        padding: 1rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    
+    .preview-counter {
+        text-align: center;
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    
+    .instruction-box {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border-left: 4px solid #2196F3;
+        padding: 1rem;
+        border-radius: 0 10px 10px 0;
+        margin: 0.5rem 0;
+        font-size: 0.9rem;
+        color: #1565c0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -67,6 +94,7 @@ if 'preview_images' not in st.session_state:
     st.session_state.preview_images = []
     st.session_state.processed_files = 0
     st.session_state.total_size = 0
+    st.session_state.current_preview = 0  # Para controlar qué imagen se muestra
 
 # Header
 st.markdown("""
@@ -74,7 +102,7 @@ st.markdown("""
     <h1 style="font-size: 3.5rem; background: linear-gradient(45deg, #2196F3, #4CAF50); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
         🚀 PDF Converter Yan
     </h1>
-    <p style="font-size: 1.3rem; color: #666;">Imágenes coloridas con rotación manual </p>
+    <p style="font-size: 1.3rem; color: #666;">Imágenes coloridas con rotación manual y marca Yan</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -94,7 +122,7 @@ uploaded_files = st.file_uploader(
     label_visibility="collapsed"
 )
 
-# CONFIGURACIÓN - SIN ORIENTACIÓN, SOLO ROTACIÓN MANUAL
+# CONFIGURACIÓN
 st.markdown("### ⚙️ Configuración de Conversión")
 
 with st.container():
@@ -104,11 +132,28 @@ with st.container():
     
     with col1:
         max_files = st.number_input("Máximo archivos", 1, 50, 20)
-        quality = st.slider("Calidad PDF (DPI)", 50, 300, 150)
+        quality = st.slider("Calidad PDF (DPI)", 50, 300, 150, 
+                          help="Valores más bajos = PDF más ligero")
+        
+        # Optimización de compresión
+        compression_level = st.select_slider(
+            "📦 Compresión PDF",
+            options=["Mínima", "Baja", "Media", "Alta", "Máxima"],
+            value="Media",
+            help="Alta/Máxima = archivos más pequeños, calidad ligeramente reducida"
+        )
     
     with col2:
         max_file_size = st.number_input("Tamaño máx. (MB)", 1, 100, 50)
         margin = st.slider("Margen (mm)", 0, 50, 0)
+        
+        # Optimización de imagen
+        optimize_images = st.checkbox("⚡ Optimizar imágenes", value=True,
+                                    help="Reduce tamaño manteniendo calidad aceptable")
+        
+        if optimize_images:
+            max_dimension = st.number_input("Máx dimensión (px)", 800, 4000, 1920,
+                                          help="Redimensiona imágenes grandes")
     
     with col3:
         sheet_format = st.selectbox(
@@ -121,7 +166,7 @@ with st.container():
             ["Original", "A4", "Carta", "Personalizado"]
         )
     
-    # Fila 2: Rotación manual, nombre y salida
+    # Fila 2: Rotación manual con instrucciones debajo del título
     col4, col5, col6 = st.columns(3)
     
     custom_width, custom_height = 210, 297
@@ -134,9 +179,21 @@ with st.container():
             with c2:
                 custom_height = st.number_input("Alto (mm)", 50, 500, 297)
         
+        # Título de rotación
         st.markdown("**🎚️ Rotación Manual**")
-        rotation_degrees = st.slider("Grados", -360, 360, 0, 90,
-                                   help="Valores positivos = sentido horario, negativos = antihorario")
+        
+        # INSTRUCCIONES DEBAJO DEL TÍTULO
+        st.markdown("""
+        <div class="instruction-box">
+            💡 <b>Instrucciones:</b><br>
+            • <b>0°</b> = Sin rotación<br>
+            • <b>Positivo (+)</b> = Sentido horario ↻<br>
+            • <b>Negativo (-)</b> = Sentido antihorario ↺<br>
+            • Usa valores como 90, 180, 270 para giros exactos
+        </div>
+        """, unsafe_allow_html=True)
+        
+        rotation_degrees = st.slider("Grados", -360, 360, 0, 90)
         if rotation_degrees != 0:
             direction = "horario ↻" if rotation_degrees > 0 else "antihorario ↺"
             st.info(f"🔄 Rotación: {abs(rotation_degrees)}° {direction}")
@@ -224,8 +281,20 @@ def get_sheet_emoji():
 def apply_rotation(img):
     """Aplica solo la rotación manual del usuario"""
     if rotation_degrees != 0:
-        # Rotación positiva = sentido horario (negativo en PIL es horario)
         img = img.rotate(-rotation_degrees, expand=True)
+    return img
+
+def optimize_image_size(img, max_dim=1920):
+    """Optimiza el tamaño de la imagen para PDF más ligero"""
+    width, height = img.size
+    max_current = max(width, height)
+    
+    if max_current > max_dim:
+        scale = max_dim / max_current
+        new_width = int(width * scale)
+        new_height = int(height * scale)
+        return img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    
     return img
 
 def resize_to_page_size(img):
@@ -258,16 +327,31 @@ def resize_to_page_size(img):
     
     return img.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
+def get_compression_quality():
+    """Retorna calidad de compresión según nivel seleccionado"""
+    compression_map = {
+        "Mínima": 95,
+        "Baja": 85,
+        "Media": 75,
+        "Alta": 60,
+        "Máxima": 45
+    }
+    return compression_map.get(compression_level, 75)
+
 def add_watermark_to_image(img, text="Yan"):
     """Añade marca de agua 'Yan' a la imagen"""
     watermarked = img.copy()
     draw = ImageDraw.Draw(watermarked)
     
+    # Tamaño de fuente adaptativo según tamaño de imagen
+    img_size = min(img.width, img.height)
+    font_size = max(30, min(60, img_size // 20))
+    
     try:
-        font = ImageFont.truetype("arialbd.ttf", 60)
+        font = ImageFont.truetype("arialbd.ttf", font_size)
     except:
         try:
-            font = ImageFont.truetype("DejaVuSans-Bold.ttf", 60)
+            font = ImageFont.truetype("DejaVuSans-Bold.ttf", font_size)
         except:
             font = ImageFont.load_default()
     
@@ -275,12 +359,13 @@ def add_watermark_to_image(img, text="Yan"):
     text_width = bbox[2] - bbox[0]
     text_height = bbox[3] - bbox[1]
     
-    x = img.width - text_width - 50
-    y = img.height - text_height - 50
+    x = img.width - text_width - 30
+    y = img.height - text_height - 30
     
-    for offset in range(4):
-        draw.text((x+offset, y+offset), text, font=font, fill=(0, 0, 0, 60))
-    draw.text((x, y), text, font=font, fill=(255, 255, 255, 200))
+    # Sombra más sutil
+    for offset in range(2):
+        draw.text((x+offset, y+offset), text, font=font, fill=(0, 0, 0, 80))
+    draw.text((x, y), text, font=font, fill=(255, 255, 255, 220))
     
     return watermarked
 
@@ -331,7 +416,6 @@ if uploaded_files:
                 """, unsafe_allow_html=True)
             
             with progress_cols[3]:
-                # Indicador de rotación
                 if rotation_degrees != 0:
                     rot_emoji = "🔄"
                     rot_text = f"{rotation_degrees}°"
@@ -352,22 +436,27 @@ if uploaded_files:
             
             images_data = []
             color_profile = get_color_profile()
+            compression_quality = get_compression_quality()
             
             for idx, file in enumerate(valid_files):
                 try:
                     image = Image.open(file)
                     original_size = image.size
                     
-                    # PASO 1: Aplicar rotación manual (único control de orientación)
+                    # PASO 1: Optimizar tamaño si está activado
+                    if optimize_images:
+                        image = optimize_image_size(image, max_dimension)
+                    
+                    # PASO 2: Aplicar rotación manual
                     image = apply_rotation(image)
                     
-                    # PASO 2: Redimensionar
+                    # PASO 3: Redimensionar
                     image = resize_to_page_size(image)
                     
-                    # PASO 3: Aplicar perfil de color
+                    # PASO 4: Aplicar perfil de color
                     image = apply_color_profile(image, color_profile)
                     
-                    # PASO 4: Convertir a RGB
+                    # PASO 5: Convertir a RGB
                     if image.mode in ('RGBA', 'LA', 'P'):
                         background = Image.new('RGB', image.size, (255, 255, 255))
                         if image.mode == 'P':
@@ -380,7 +469,7 @@ if uploaded_files:
                     elif image.mode != 'RGB':
                         image = image.convert('RGB')
                     
-                    # PASO 5: Añadir marca de agua
+                    # PASO 6: Añadir marca de agua
                     image = add_watermark_to_image(image, "Yan")
                     
                     was_rotated = rotation_degrees != 0
@@ -391,73 +480,119 @@ if uploaded_files:
                         'original': file,
                         'original_size': original_size,
                         'was_rotated': was_rotated,
-                        'rotation_applied': rotation_degrees
+                        'rotation_applied': rotation_degrees,
+                        'final_size': image.size
                     })
                     
                     progress = (idx + 1) / len(valid_files)
                     progress_bar.progress(int(progress * 100))
-                    status_text.text(f"Procesando {idx + 1} de {len(valid_files)}... 🎨 {sheet_format} 🔄 {rotation_degrees}°")
+                    status_text.text(f"Procesando {idx + 1} de {len(valid_files)}... 🎨 {sheet_format} 🔄 {rotation_degrees}° ⚡ Compresión: {compression_level}")
                     
                 except Exception as e:
                     st.error(f"Error con {file.name}: {str(e)}")
             
             progress_bar.empty()
-            status_text.success(f"✅ ¡{len(images_data)} imágenes procesadas!")
             
-            # PREVISUALIZACIÓN - SOLO LA PRIMERA IMAGEN
+            # Calcular ahorro de espacio
+            original_pixels = sum(d['original_size'][0] * d['original_size'][1] for d in images_data)
+            final_pixels = sum(d['final_size'][0] * d['final_size'][1] for d in images_data)
+            savings = (1 - final_pixels/original_pixels) * 100 if original_pixels > 0 else 0
+            
+            status_text.success(f"✅ ¡{len(images_data)} imágenes procesadas! ⚡ Optimización: {savings:.0f}% más ligero")
+            
+            # VISTA PREVIA MÓVIL - TODAS LAS IMÁGENES EN FORMATO CARRUSEL
             if images_data:
-                st.markdown("### 👁️ Vista Previa (Primera imagen)")
+                st.markdown("### 👁️ Vista Previa (Formato Móvil)")
                 
-                preview_col1, preview_col2 = st.columns([2, 1])
+                # Selector de imagen para vista previa tipo carrusel
+                total_images = len(images_data)
                 
-                with preview_col1:
-                    first_data = images_data[0]
-                    st.image(first_data['image'], 
-                            caption=f"🖼️ {first_data['name']} • Estilo: {sheet_format} • Marca: Yan", 
+                # Controles de navegación
+                nav_col1, nav_col2, nav_col3 = st.columns([1, 3, 1])
+                
+                with nav_col1:
+                    if st.button("⬅️ Anterior", disabled=total_images <= 1):
+                        st.session_state.current_preview = max(0, st.session_state.current_preview - 1)
+                
+                with nav_col2:
+                    st.markdown(f"""
+                    <div class="preview-counter">
+                        📷 Imagen {st.session_state.current_preview + 1} de {total_images} 
+                        (Desliza o usa botones para navegar)
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Mostrar imagen actual en contenedor móvil
+                    current_idx = st.session_state.current_preview % total_images
+                    current_data = images_data[current_idx]
+                    
+                    st.markdown('<div class="mobile-preview-container">', unsafe_allow_html=True)
+                    st.image(current_data['image'], 
+                            caption=f"{current_data['name']} • {current_data['final_size'][0]}×{current_data['final_size'][1]}px", 
                             use_container_width=True)
                     
-                    if first_data['was_rotated']:
-                        direction = "horario ↻" if first_data['rotation_applied'] > 0 else "antihorario ↺"
-                        st.info(f"🔄 Imagen rotada {abs(first_data['rotation_applied'])}° {direction}")
-                
-                with preview_col2:
-                    st.markdown("### 📋 Detalles del Proceso")
+                    # Indicador de rotación si aplica
+                    if current_data['was_rotated']:
+                        direction = "horario ↻" if current_data['rotation_applied'] > 0 else "antihorario ↺"
+                        st.info(f"🔄 Rotada {abs(current_data['rotation_applied'])}° {direction}")
                     
+                    st.markdown('</div>', unsafe_allow_html=True)
+                
+                with nav_col3:
+                    if st.button("Siguiente ➡️", disabled=total_images <= 1):
+                        st.session_state.current_preview = min(total_images - 1, st.session_state.current_preview + 1)
+                
+                # Slider adicional para navegación rápida
+                if total_images > 1:
+                    selected_preview = st.slider("Navegar imágenes", 1, total_images, st.session_state.current_preview + 1)
+                    st.session_state.current_preview = selected_preview - 1
+                
+                # Detalles al lado de la vista previa
+                st.markdown("### 📋 Resumen del Proceso")
+                
+                summary_col1, summary_col2 = st.columns(2)
+                
+                with summary_col1:
+                    st.markdown("#### 🎨 Ajustes aplicados")
                     changes = []
                     if "Natural" not in sheet_format:
-                        changes.append(f"🎨 Color: {sheet_format}")
-                    if first_data['was_rotated']:
-                        direction = "horario ↻" if first_data['rotation_applied'] > 0 else "antihorario ↺"
-                        changes.append(f"🔄 Rotación: {abs(first_data['rotation_applied'])}° {direction}")
-                    changes.append("💧 Marca de agua Yan")
+                        changes.append(f"✅ Color: {sheet_format}")
+                    if rotation_degrees != 0:
+                        direction = "horario ↻" if rotation_degrees > 0 else "antihorario ↺"
+                        changes.append(f"✅ Rotación: {abs(rotation_degrees)}° {direction}")
+                    if optimize_images:
+                        changes.append(f"✅ Optimización: {max_dimension}px máx")
+                    changes.append(f"✅ Compresión: {compression_level}")
+                    changes.append("✅ Marca de agua Yan")
                     
                     for change in changes:
                         st.success(change)
-                    
-                    st.markdown("#### 📐 Especificaciones")
+                
+                with summary_col2:
+                    st.markdown("#### 📊 Estadísticas")
                     st.code(f"""
-Original:     {first_data['original_size'][0]}×{first_data['original_size'][1]} px
-Final:        {first_data['image'].width}×{first_data['image'].height} px
-Rotación:     {rotation_degrees}°
-Perfil color: {sheet_format}
-Total imgs:   {len(images_data)}
+Total imágenes:     {len(images_data)}
+Tamaño original:    {original_pixels/1000000:.1f} MPix
+Tamaño final:       {final_pixels/1000000:.1f} MPix
+Ahorro:             {savings:.0f}%
+Calidad PDF:        {quality} DPI
+Compresión:         {compression_level} ({compression_quality}%)
                     """)
                     
                     if len(images_data) > 1:
-                        st.markdown("#### 🗂️ Archivos incluidos")
+                        st.markdown("#### 🗂️ Lista de archivos")
                         for i, data in enumerate(images_data, 1):
                             rotated = " 🔄" if data['was_rotated'] else ""
-                            st.caption(f"{i}. {data['name']}{rotated}")
+                            st.caption(f"{i}. {data['name']}{rotated} ({data['final_size'][0]}×{data['final_size'][1]})")
             
             # Botón de generación
             st.markdown("<br>", unsafe_allow_html=True)
             
-            if st.button("🚀 GENERAR PDF(S) CON MARCA YAN", key="convert", use_container_width=True):
-                with st.spinner("Creando documentos..."):
+            if st.button("🚀 GENERAR PDF(S) OPTIMIZADO", key="convert", use_container_width=True):
+                with st.spinner(f"Creando PDF con compresión {compression_level}..."):
                     
                     final_images = []
                     
-                    # Solo las imágenes procesadas
                     for data in images_data:
                         final_images.append(data['image'])
                     
@@ -467,38 +602,42 @@ Total imgs:   {len(images_data)}
                         first_img = final_images[0]
                         other_imgs = final_images[1:]
                         
+                        # Guardar con compresión optimizada
                         save_kwargs = {
                             'resolution': quality,
                             'save_all': True,
                             'append_images': other_imgs,
+                            'quality': compression_quality,
                         }
                         
                         first_img.save(pdf_buffer, 'PDF', **save_kwargs)
                         pdf_buffer.seek(0)
+                        
+                        # Calcular tamaño del PDF
+                        pdf_size_mb = len(pdf_buffer.getvalue()) / (1024 * 1024)
                         
                         st.session_state.processed_files += len(images_data)
                         st.session_state.total_size += total_size
                         
                         st.balloons()
                         
-                        # Mensaje de éxito
                         rot_info = f"Rotación: {rotation_degrees}°" if rotation_degrees != 0 else "Sin rotación"
                         
                         st.markdown(f"""
                         <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; color: white; margin: 1rem 0;">
-                            <h2>✨ ¡PDF Creado con Éxito! ✨</h2>
+                            <h2>✨ ¡PDF Optimizado Creado! ✨</h2>
                             <p>Estilo: <b>{sheet_format}</b> • {len(final_images)} páginas</p>
                             <p style="font-size: 0.9rem; opacity: 0.9;">
                                 {rot_info} • 
-                                {len([d for d in images_data if d['was_rotated']])} imágenes rotadas • 
-                                Calidad {quality} DPI • 
+                                Tamaño PDF: {pdf_size_mb:.1f} MB •
+                                Compresión: {compression_level} •
                                 Marca Yan™
                             </p>
                         </div>
                         """, unsafe_allow_html=True)
                         
                         st.download_button(
-                            label=f"📥 Descargar {project_name}.pdf",
+                            label=f"📥 Descargar {project_name}.pdf ({pdf_size_mb:.1f} MB)",
                             data=pdf_buffer,
                             file_name=f"{project_name}.pdf",
                             mime="application/pdf",
@@ -506,17 +645,22 @@ Total imgs:   {len(images_data)}
                         )
                     
                     if output_format in ["PDFs separados", "Ambos"]:
-                        st.markdown("### 📄 Archivos Individuales")
+                        st.markdown("### 📄 Archivos Individuales Optimizados")
                         
                         individual_cols = st.columns(3)
                         for idx, data in enumerate(images_data):
                             with individual_cols[idx % 3]:
                                 pdf_individual = io.BytesIO()
-                                data['image'].save(pdf_individual, 'PDF', resolution=quality)
+                                # Guardar con compresión
+                                data['image'].save(pdf_individual, 'PDF', 
+                                                 resolution=quality, 
+                                                 quality=compression_quality)
                                 pdf_individual.seek(0)
                                 
+                                ind_size = len(pdf_individual.getvalue()) / 1024
+                                
                                 st.download_button(
-                                    label=f"📄 {data['name']}_Yan.pdf",
+                                    label=f"📄 {data['name']}_Yan.pdf ({ind_size:.0f} KB)",
                                     data=pdf_individual,
                                     file_name=f"{data['name']}_Yan.pdf",
                                     mime="application/pdf",
@@ -534,13 +678,13 @@ with st.sidebar:
         st.metric("MB totales", f"{st.session_state.total_size:.1f}")
     
     st.markdown("---")
-    st.info("💡 **Tip:** Usa la rotación manual (-360° a 360°) para ajustar la orientación exacta de tus imágenes. Valores positivos = sentido horario, negativos = antihorario.")
+    st.info("💡 **Tip:** Activa 'Optimizar imágenes' y usa compresión 'Alta' o 'Máxima' para PDFs más ligeros. La rotación manual permite ajustes precisos de -360° a 360°.")
 
 # Footer
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; padding: 2rem;">
-    <p>🚀 PDF Converter De Yan | Imágenes coloridas con rotación manual </p>
-    <p style="font-size: 0.8rem;">5 estilos de color • Rotación manual -360° a 360° • Sin orientación automática • Marca Yan™</p>
+    <p>🚀 PDF Converter De Yan | Vista previa móvil, rotación manual y optimización inteligente</p>
+    <p style="font-size: 0.8rem;">5 estilos de color • Rotación -360° a 360° • Compresión ajustable • Vista previa tipo carrusel • Marca Yan™</p>
 </div>
 """, unsafe_allow_html=True)
