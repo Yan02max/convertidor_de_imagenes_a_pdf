@@ -74,7 +74,7 @@ st.markdown("""
     <h1 style="font-size: 3.5rem; background: linear-gradient(45deg, #2196F3, #4CAF50); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
         🚀 PDF Converter Yan
     </h1>
-    <p style="font-size: 1.3rem; color: #666;">Imágenes coloridas con rotación manual y marca Yan</p>
+    <p style="font-size: 1.3rem; color: #666;">Imágenes coloridas con rotación manual </p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -540,7 +540,7 @@ with st.sidebar:
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; padding: 2rem;">
-    <p>🚀 PDF Converter De Yan | Imágenes coloridas con rotación manual y marca Yan</p>
+    <p>🚀 PDF Converter De Yan | Imágenes coloridas con rotación manual </p>
     <p style="font-size: 0.8rem;">5 estilos de color • Rotación manual -360° a 360° • Sin orientación automática • Marca Yan™</p>
 </div>
 """, unsafe_allow_html=True)
